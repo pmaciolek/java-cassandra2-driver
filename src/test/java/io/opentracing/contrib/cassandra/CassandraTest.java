@@ -21,11 +21,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.*;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.UUIDs;
@@ -34,10 +30,8 @@ import io.opentracing.Scope;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
 import io.opentracing.tag.Tags;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper;
@@ -54,7 +48,6 @@ public class CassandraTest {
     System.setProperty("java.library.path", "src/test/resources/libs");
     mockTracer.reset();
     EmbeddedCassandraServerHelper.startEmbeddedCassandra();
-    EmbeddedCassandraServerHelper.getSession();
   }
 
   @After
@@ -224,9 +217,10 @@ public class CassandraTest {
     BoundStatement bound = prepared.bind();
     mockTracer.reset();
     try {
-      session.executeAsync(bound).get(15, TimeUnit.SECONDS);
+      session.executeAsync(bound).get(10, TimeUnit.SECONDS);
       fail();
     } catch (Exception ignored) {
+      ignored.printStackTrace();
     }
 
     waitForSpans(mockTracer, 1);
@@ -243,8 +237,8 @@ public class CassandraTest {
     MockSpan parentSpan = mockTracer.buildSpan("parent").start();
 
     try (Scope ignored = mockTracer.activateSpan(parentSpan)) {
-      session.executeAsync("SELECT * FROM system_schema.keyspaces;").get();
-      session.execute("SELECT * FROM system_schema.keyspaces;");
+      session.executeAsync("SELECT * FROM system.schema_keyspaces;").get();
+      session.execute("SELECT * FROM system.schema_keyspaces;");
     } finally {
       parentSpan.finish();
     }
@@ -272,7 +266,7 @@ public class CassandraTest {
   @Test
   public void queryBuilder() {
     Session session = createSession();
-    Select select = QueryBuilder.select().from("system_schema", "keyspaces");
+    Select select = QueryBuilder.select().from("system", "schema_keyspaces");
     session.execute(select);
 
     List<MockSpan> finished = mockTracer.finishedSpans();
@@ -284,10 +278,9 @@ public class CassandraTest {
 
   @Test
   public void usingNewSession() throws Exception {
-    Session session = createNewSession();
-    session = session.initAsync().get(15, TimeUnit.SECONDS);
+    Session session = createNewSession().initAsync().get(15, TimeUnit.SECONDS);
 
-    session.execute("SELECT * FROM system_schema.keyspaces;");
+    session.execute("SELECT * FROM system.schema_keyspaces;");
 
     List<MockSpan> finished = mockTracer.finishedSpans();
     assertEquals(1, finished.size());
@@ -311,7 +304,7 @@ public class CassandraTest {
     ListenableFuture<Session> futureSession = createAsyncSession();
     Session session = futureSession.get();
 
-    session.execute("SELECT * FROM system_schema.keyspaces;");
+    session.execute("SELECT * FROM system.schema_keyspaces;");
 
     List<MockSpan> finished = mockTracer.finishedSpans();
     assertEquals(1, finished.size());
@@ -325,7 +318,7 @@ public class CassandraTest {
     ListenableFuture<Session> futureSession = createAsyncSessionWithKey();
     Session session = futureSession.get();
 
-    session.execute("SELECT * FROM system_schema.keyspaces;");
+    session.execute("SELECT * FROM system.schema_keyspaces;");
 
     session.closeAsync().get(15, TimeUnit.SECONDS);
     assertTrue(session.isClosed());
@@ -367,10 +360,7 @@ public class CassandraTest {
         UUIDs.timeBased(), "title").get(15, TimeUnit.SECONDS);
 
     // Insert 2
-    Map<String, Object> values = new HashMap<>();
-    values.put("id", UUIDs.timeBased());
-    values.put("title", "title2");
-    session.executeAsync("INSERT INTO test.book (id, title) VALUES (:id, :title)", values)
+    session.executeAsync("INSERT INTO test.book (id, title) VALUES (:id, :title)", UUIDs.timeBased(), "title2")
         .get(15, TimeUnit.SECONDS);
 
     // Insert 3
@@ -387,10 +377,7 @@ public class CassandraTest {
         UUIDs.timeBased(), "title");
 
     // Insert 2
-    Map<String, Object> values = new HashMap<>();
-    values.put("id", UUIDs.timeBased());
-    values.put("title", "title2");
-    session.execute("INSERT INTO test.book (id, title) VALUES (:id, :title)", values);
+    session.execute("INSERT INTO test.book (id, title) VALUES (:id, :title)", UUIDs.timeBased(), "title2");
 
     // Insert 3
     PreparedStatement preparedStatement = session.prepare(
@@ -437,10 +424,10 @@ public class CassandraTest {
     return cluster.connect();
   }
 
-  private Session createNewSession() {
+  private AsyncInitSession createNewSession() {
     Cluster.Builder builder = Cluster.builder().addContactPoints("127.0.0.1").withPort(9142);
     Cluster cluster = new TracingCluster(builder, mockTracer);
-    return cluster.newSession();
+    return (AsyncInitSession) cluster.newSession();
   }
 
   private Session createSessionWithKey() {

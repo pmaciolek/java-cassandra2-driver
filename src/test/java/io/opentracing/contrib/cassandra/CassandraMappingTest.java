@@ -45,7 +45,7 @@ public class CassandraMappingTest {
   public void before() throws Exception {
     System.setProperty("java.library.path", "src/test/resources/libs");
     EmbeddedCassandraServerHelper.startEmbeddedCassandra();
-    EmbeddedCassandraServerHelper.getSession();
+//    EmbeddedCassandraServerHelper.getSession();
     Session session = createSession();
     createKeyspace(session);
     createTable(session);
@@ -123,6 +123,22 @@ public class CassandraMappingTest {
 
     public Book(UUID id, String title) {
       this.id = id;
+      this.title = title;
+    }
+
+    public void setId(UUID id) {
+      this.id = id;
+    }
+
+    public UUID getId() {
+      return id;
+    }
+
+    public String getTitle() {
+      return title;
+    }
+
+    public void setTitle(String title) {
       this.title = title;
     }
 

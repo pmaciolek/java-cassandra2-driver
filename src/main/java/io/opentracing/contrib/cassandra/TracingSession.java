@@ -13,18 +13,9 @@
  */
 package io.opentracing.contrib.cassandra;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.CloseFuture;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.GuavaCompatibility;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.RegularStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.*;
 import com.google.common.base.Function;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -45,7 +36,7 @@ import java.util.concurrent.Executors;
 /**
  * Decorator for {@link Session} Instantiated by TracingCluster
  */
-public class TracingSession implements Session {
+public class TracingSession implements AsyncInitSession {
 
   static final String COMPONENT_NAME = "java-cassandra";
   private final ExecutorService executorService;
@@ -54,6 +45,7 @@ public class TracingSession implements Session {
   private final QuerySpanNameProvider querySpanNameProvider;
 
   public TracingSession(Session session, Tracer tracer) {
+
     this.session = session;
     this.tracer = tracer;
     this.querySpanNameProvider = CustomStringSpanName.newBuilder().build("execute");
@@ -88,7 +80,7 @@ public class TracingSession implements Session {
    * {@inheritDoc}
    */
   @Override
-  public Session init() {
+  public AsyncInitSession init() {
     return new TracingSession(session.init(), tracer, querySpanNameProvider, executorService);
   }
 
@@ -97,11 +89,10 @@ public class TracingSession implements Session {
    */
   @Override
   public ListenableFuture<Session> initAsync() {
-    return GuavaCompatibility.INSTANCE
-        .transform(session.initAsync(), new Function<Session, Session>() {
+    return Futures.transform(((AsyncInitSession) session).initAsync(), new Function<Session, Session>() {
           @Override
           public Session apply(Session session) {
-            return new TracingSession(session, tracer);
+            return new TracingSession((AsyncInitSession) session, tracer);
           }
         });
   }
@@ -141,22 +132,6 @@ public class TracingSession implements Session {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ResultSet execute(String query, Map<String, Object> values) {
-    Span span = buildSpan(query);
-    ResultSet resultSet;
-    try {
-      resultSet = session.execute(query, values);
-      finishSpan(span, resultSet);
-      return resultSet;
-    } catch (Exception e) {
-      finishSpan(span, e);
-      throw e;
-    }
-  }
 
   /**
    * {@inheritDoc}
@@ -204,25 +179,18 @@ public class TracingSession implements Session {
    * {@inheritDoc}
    */
   @Override
-  public ResultSetFuture executeAsync(String query, Map<String, Object> values) {
-    final Span span = buildSpan(query);
-    ResultSetFuture future = session.executeAsync(query, values);
-    future.addListener(createListener(span, future), executorService);
-
-    return future;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
   public ResultSetFuture executeAsync(Statement statement) {
     String query = getQuery(statement);
     final Span span = buildSpan(query);
-    ResultSetFuture future = session.executeAsync(statement);
-    future.addListener(createListener(span, future), executorService);
 
-    return future;
+    try {
+      ResultSetFuture future = session.executeAsync(statement);
+      future.addListener(createListener(span, future), executorService);
+      return future;
+    } catch (Exception e) {
+      finishSpan(span, e);
+      throw e;
+    }
   }
 
   /**
