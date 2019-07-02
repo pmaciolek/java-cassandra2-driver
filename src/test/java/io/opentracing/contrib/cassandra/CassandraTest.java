@@ -402,13 +402,13 @@ public class CassandraTest {
       assertNotNull(mockSpan.tags().get(Tags.PEER_HOSTNAME.getKey()));
 
       if (mockSpan.tags().get("db.statement").toString().contains("VALUES (?, ?)")) {
-        if (mockSpan.tags().containsKey("db.param_1")) {
-          assertEquals("title", mockSpan.tags().get("db.param_1"));
+        if (mockSpan.tags().containsKey("db.statement.value_1")) {
+          assertEquals("title", mockSpan.tags().get("db.statement.value_1"));
         } else {
-          assertEquals("title3", mockSpan.tags().get("db.param_title"));
+          assertEquals("title3", mockSpan.tags().get("db.statement.title"));
         }
       } else if (mockSpan.tags().get("db.statement").toString().contains("VALUES (:id, :title)")) {
-        assertEquals("title2", mockSpan.tags().get("db.param_1"));
+        assertEquals("title2", mockSpan.tags().get("db.statement.value_1"));
       }
     }
   }

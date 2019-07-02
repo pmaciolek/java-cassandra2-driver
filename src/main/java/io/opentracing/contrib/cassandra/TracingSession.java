@@ -287,11 +287,11 @@ public class TracingSession implements AsyncInitSession {
   }
 
   private static final String buildParamName(String param_name) {
-    return String.format("db.param_%s", param_name);
+    return String.format("%s.%s", Tags.DB_STATEMENT.getKey(), param_name);
   }
 
   private static final String buildParamKey(int param_index) {
-    return String.format("db.param_%d", param_index);
+    return String.format("%s.value_%d", Tags.DB_STATEMENT.getKey(), param_index);
   }
 
   private static void addQueryParams(Span span, Statement statement) {
