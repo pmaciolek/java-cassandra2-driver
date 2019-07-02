@@ -11,42 +11,40 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.opentracing.contrib.cassandra.nameprovider;
+package io.opentracing.contrib.cassandra2.nameprovider;
 
 /**
- * @author Jordan J Lopez Returns a custom prefix and the full query as the span name
+ * @author Jordan J Lopez Returns a predifined string for every span
  */
-public class PrefixedFullQuerySpanName implements QuerySpanNameProvider {
+public class CustomStringSpanName implements QuerySpanNameProvider {
 
-  private String prefix;
+  private String customString;
 
   public static class Builder implements QuerySpanNameProvider.Builder {
 
+    // Defaults to "execute"
     @Override
     public QuerySpanNameProvider build() {
-      return new PrefixedFullQuerySpanName("Cassandra");
+      return new CustomStringSpanName("execute");
     }
 
-    public QuerySpanNameProvider build(String prefix) {
-      return new PrefixedFullQuerySpanName(prefix);
+    // Provide customString
+    public QuerySpanNameProvider build(String customString) {
+      return new CustomStringSpanName(customString);
     }
   }
 
-  PrefixedFullQuerySpanName(String prefix) {
-    if (prefix == null || prefix.equals("")) {
-      this.prefix = "";
+  CustomStringSpanName(String customString) {
+    if (customString == null) {
+      this.customString = "execute";
     } else {
-      this.prefix = prefix + ": ";
+      this.customString = customString;
     }
   }
 
   @Override
   public String querySpanName(String query) {
-    if (query == null || query.equals("")) {
-      return this.prefix + "N/A";
-    } else {
-      return this.prefix + query;
-    }
+    return customString;
   }
 
   public static Builder newBuilder() {

@@ -57,8 +57,8 @@ public interface QuerySpanNameProvider {
 ### CustomStringSpanName
 Returns a predefined string for every span. Defaults to `execute` on null or "" argument to build()
 ```java
-import io.opentracing.contrib.cassandra.QuerySpanNameProvider.CustomStringSpanName;
-import io.opentracing.contrib.cassandra.QuerySpanNameProvider.QuerySpanNameProvider;
+import io.opentracing.contrib.cassandra2.QuerySpanNameProvider.CustomStringSpanName;
+import io.opentracing.contrib.cassandra2.QuerySpanNameProvider.QuerySpanNameProvider;
 ...
 
 // Initialize with custom string
@@ -82,8 +82,8 @@ session.execute("SELECT * FROM example.table WHERE field = ?", "test");
 ### FullQuerySpanName
 Returns the full query as the span name.
 ```java
-import io.opentracing.contrib.cassandra.QuerySpanNameProvider.FullQuerySpanName;
-import io.opentracing.contrib.cassandra.QuerySpanNameProvider.QuerySpanNameProvider;
+import io.opentracing.contrib.cassandra2.QuerySpanNameProvider.FullQuerySpanName;
+import io.opentracing.contrib.cassandra2.QuerySpanNameProvider.QuerySpanNameProvider;
 ...
 
 // Initialize
@@ -110,8 +110,8 @@ session.execute("SELECT * FROM example.table WHERE field = ?", "test");
 ### PrefixedFullQuerySpanName
 Returns the full query as the span name, with a custom string prefix. Defaults to `Cassandra` on null or "" argument to build().
 ```java
-import io.opentracing.contrib.cassandra.QuerySpanNameProvider.PrefixedFullQuerySpanName;
-import io.opentracing.contrib.cassandra.QuerySpanNameProvider.QuerySpanNameProvider;
+import io.opentracing.contrib.cassandra2.QuerySpanNameProvider.PrefixedFullQuerySpanName;
+import io.opentracing.contrib.cassandra2.QuerySpanNameProvider.QuerySpanNameProvider;
 ...
 
 // Initialize with custom prefix string
@@ -166,8 +166,8 @@ The supported Cassandra methods are:
 - CREATE INDEX
 - DROP INDEX
 ```java
-import io.opentracing.contrib.cassandra.QuerySpanNameProvider.QueryMethodTableSpanName;
-import io.opentracing.contrib.cassandra.QuerySpanNameProvider.QuerySpanNameProvider;
+import io.opentracing.contrib.cassandra2.QuerySpanNameProvider.QueryMethodTableSpanName;
+import io.opentracing.contrib.cassandra2.QuerySpanNameProvider.QuerySpanNameProvider;
 ...
 
 // Initialize

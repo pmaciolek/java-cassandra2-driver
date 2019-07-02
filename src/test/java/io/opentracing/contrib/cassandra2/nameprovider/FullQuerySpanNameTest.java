@@ -11,23 +11,20 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.opentracing.contrib.cassandra;
+package io.opentracing.contrib.cassandra2.nameprovider;
 
-import static org.awaitility.Awaitility.await;
-import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.Assert.assertEquals;
 
-import io.opentracing.mock.MockTracer;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
+import org.junit.Test;
 
-class TestUtil {
+public class FullQuerySpanNameTest {
 
-  static void waitForSpans(final MockTracer tracer, int spans) {
-    await().atMost(15, TimeUnit.SECONDS).until(new Callable<Integer>() {
-      @Override
-      public Integer call() {
-        return tracer.finishedSpans().size();
-      }
-    }, equalTo(spans));
+  @Test
+  public void fullQuerySpanNameTest() {
+    QuerySpanNameProvider fullQuerySpanName = FullQuerySpanName.newBuilder().build();
+    assertEquals("SELECT * FROM test.table_name;",
+        fullQuerySpanName.querySpanName("SELECT * FROM test.table_name;"));
+    assertEquals("N/A", fullQuerySpanName.querySpanName(""));
+    assertEquals("N/A", fullQuerySpanName.querySpanName(null));
   }
 }

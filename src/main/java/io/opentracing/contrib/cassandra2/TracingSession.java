@@ -11,7 +11,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.opentracing.contrib.cassandra;
+package io.opentracing.contrib.cassandra2;
 
 import com.datastax.driver.core.*;
 import com.google.common.base.Function;
@@ -19,8 +19,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.opentracing.contrib.cassandra.nameprovider.CustomStringSpanName;
-import io.opentracing.contrib.cassandra.nameprovider.QuerySpanNameProvider;
+import io.opentracing.contrib.cassandra2.nameprovider.CustomStringSpanName;
+import io.opentracing.contrib.cassandra2.nameprovider.QuerySpanNameProvider;
 import io.opentracing.tag.Tags;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -39,7 +39,7 @@ import java.util.concurrent.Executors;
  */
 public class TracingSession implements AsyncInitSession {
 
-  static final String COMPONENT_NAME = "java-cassandra";
+  static final String COMPONENT_NAME = "java-cassandra2";
   private static final boolean queryParamsExtracted = retrieveQueryParamsExtractedConfig();
 
   private final ExecutorService executorService;
@@ -339,7 +339,7 @@ public class TracingSession implements AsyncInitSession {
 
     Tags.COMPONENT.set(span, COMPONENT_NAME);
     Tags.DB_STATEMENT.set(span, query);
-    Tags.DB_TYPE.set(span, "cassandra");
+    Tags.DB_TYPE.set(span, "cassandra2");
 
     String keyspace = getLoggedKeyspace();
     if (keyspace != null) {

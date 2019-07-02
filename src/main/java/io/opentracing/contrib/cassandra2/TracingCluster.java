@@ -11,7 +11,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.opentracing.contrib.cassandra;
+package io.opentracing.contrib.cassandra2;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
@@ -19,8 +19,8 @@ import com.google.common.base.Function;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.opentracing.Tracer;
-import io.opentracing.contrib.cassandra.nameprovider.CustomStringSpanName;
-import io.opentracing.contrib.cassandra.nameprovider.QuerySpanNameProvider;
+import io.opentracing.contrib.cassandra2.nameprovider.CustomStringSpanName;
+import io.opentracing.contrib.cassandra2.nameprovider.QuerySpanNameProvider;
 import io.opentracing.util.GlobalTracer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

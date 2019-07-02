@@ -11,7 +11,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.opentracing.contrib.cassandra.nameprovider;
+package io.opentracing.contrib.cassandra2.nameprovider;
 
 /**
  * @author Jordan J Lopez Returns the full query as the span name

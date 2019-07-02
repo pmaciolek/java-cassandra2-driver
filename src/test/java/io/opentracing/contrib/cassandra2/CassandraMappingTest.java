@@ -11,9 +11,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.opentracing.contrib.cassandra;
+package io.opentracing.contrib.cassandra2;
 
-import static io.opentracing.contrib.cassandra.TestUtil.waitForSpans;
+import static io.opentracing.contrib.cassandra2.TestUtil.waitForSpans;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -27,7 +27,7 @@ import com.datastax.driver.mapping.MappingManager;
 import com.datastax.driver.mapping.annotations.Column;
 import com.datastax.driver.mapping.annotations.Table;
 import io.opentracing.Scope;
-import io.opentracing.contrib.cassandra.nameprovider.PrefixedFullQuerySpanName;
+import io.opentracing.contrib.cassandra2.nameprovider.PrefixedFullQuerySpanName;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
 import java.util.List;
