@@ -28,6 +28,7 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -39,13 +40,19 @@ import java.util.concurrent.Executors;
 public class TracingSession implements AsyncInitSession {
 
   static final String COMPONENT_NAME = "java-cassandra";
+  private static final boolean queryParamsExtracted = retrieveQueryParamsExtractedConfig();
+
   private final ExecutorService executorService;
   private final Session session;
   private final Tracer tracer;
   private final QuerySpanNameProvider querySpanNameProvider;
 
-  public TracingSession(Session session, Tracer tracer) {
+  private final static boolean retrieveQueryParamsExtractedConfig() {
+    // Perhaps we should be able to configure that?
+    return true;
+  }
 
+  public TracingSession(Session session, Tracer tracer) {
     this.session = session;
     this.tracer = tracer;
     this.querySpanNameProvider = CustomStringSpanName.newBuilder().build("execute");
@@ -123,6 +130,7 @@ public class TracingSession implements AsyncInitSession {
     Span span = buildSpan(query);
     ResultSet resultSet;
     try {
+      addQueryParams(span, values);
       resultSet = session.execute(query, values);
       finishSpan(span, resultSet);
       return resultSet;
@@ -140,6 +148,8 @@ public class TracingSession implements AsyncInitSession {
   public ResultSet execute(Statement statement) {
     String query = getQuery(statement);
     Span span = buildSpan(query);
+    addQueryParams(span, statement);
+
     ResultSet resultSet = null;
     try {
       resultSet = session.execute(statement);
@@ -169,6 +179,8 @@ public class TracingSession implements AsyncInitSession {
   @Override
   public ResultSetFuture executeAsync(String query, Object... values) {
     final Span span = buildSpan(query);
+    addQueryParams(span, values);
+
     ResultSetFuture future = session.executeAsync(query, values);
     future.addListener(createListener(span, future), executorService);
 
@@ -181,7 +193,8 @@ public class TracingSession implements AsyncInitSession {
   @Override
   public ResultSetFuture executeAsync(Statement statement) {
     String query = getQuery(statement);
-    final Span span = buildSpan(query);
+    Span span = buildSpan(query);
+    addQueryParams(span, statement);
 
     try {
       ResultSetFuture future = session.executeAsync(statement);
@@ -271,6 +284,37 @@ public class TracingSession implements AsyncInitSession {
     }
 
     return query == null ? "" : query;
+  }
+
+  private static final String buildParamName(String param_name) {
+    return String.format("db.param_%s", param_name);
+  }
+
+  private static final String buildParamKey(int param_index) {
+    return String.format("db.param_%d", param_index);
+  }
+
+  private static void addQueryParams(Span span, Statement statement) {
+    if (!queryParamsExtracted)
+      return;
+
+    if (statement instanceof BoundStatement) {
+      List<ColumnDefinitions.Definition> vars = ((BoundStatement) statement).preparedStatement().getVariables().asList();
+      for (ColumnDefinitions.Definition def : vars) {
+        try {
+          span.setTag(buildParamName(def.getName()), String.valueOf(((BoundStatement) statement).getObject(def.getName())));
+        } catch (Throwable ignored) { /* An ill-described query will fail here */ }
+      }
+    }
+  }
+
+  private static void addQueryParams(Span span, Object... params) {
+    if (!queryParamsExtracted)
+      return;
+
+    for (int i = 0; i < params.length; i++) {
+      span.setTag(buildParamKey(i), String.valueOf(params[i]));
+    }
   }
 
   private static Runnable createListener(final Span span, final ResultSetFuture future) {

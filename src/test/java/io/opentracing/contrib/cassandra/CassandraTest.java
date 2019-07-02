@@ -72,6 +72,10 @@ public class CassandraTest {
       assertEquals(0, mockSpan.parentId());
     }
 
+    for (MockSpan mockSpan : finished) {
+      assertEquals(0, mockSpan.parentId());
+    }
+
     checkSpans(finished);
     assertNull(mockTracer.activeSpan());
   }
@@ -396,6 +400,16 @@ public class CassandraTest {
 
       assertNotNull(mockSpan.tags().get(Tags.DB_STATEMENT.getKey()));
       assertNotNull(mockSpan.tags().get(Tags.PEER_HOSTNAME.getKey()));
+
+      if (mockSpan.tags().get("db.statement").toString().contains("VALUES (?, ?)")) {
+        if (mockSpan.tags().containsKey("db.param_1")) {
+          assertEquals("title", mockSpan.tags().get("db.param_1"));
+        } else {
+          assertEquals("title3", mockSpan.tags().get("db.param_title"));
+        }
+      } else if (mockSpan.tags().get("db.statement").toString().contains("VALUES (:id, :title)")) {
+        assertEquals("title2", mockSpan.tags().get("db.param_1"));
+      }
     }
   }
 
