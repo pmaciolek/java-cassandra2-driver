@@ -100,6 +100,25 @@ public class CassandraTest {
   }
 
   @Test
+  public void updates() {
+    Session session = createSession();
+    createKeyspace(session);
+    createTable(session);
+    insert_and_update(session);
+    session.close();
+
+    List<MockSpan> finished = mockTracer.finishedSpans();
+    assertEquals(5, finished.size());
+
+    for (MockSpan mockSpan : finished) {
+      assertEquals(0, mockSpan.parentId());
+    }
+
+    checkSpans(finished);
+    assertNull(mockTracer.activeSpan());
+  }
+
+  @Test
   public void badQuery() {
     Session session = createSession();
     try {
@@ -335,7 +354,7 @@ public class CassandraTest {
   }
 
   private void createTable(Session session) {
-    session.execute("CREATE TABLE IF NOT EXISTS test.book (id uuid PRIMARY KEY, title text)");
+    session.execute("CREATE TABLE IF NOT EXISTS test.book (id uuid PRIMARY KEY, title text, authors map<text,text>, references list<text>)");
   }
 
   private void createKeyspace(Session session) {
@@ -354,7 +373,7 @@ public class CassandraTest {
   }
 
   private void createTableAsync(Session session) throws Exception {
-    session.executeAsync("CREATE TABLE IF NOT EXISTS test.book (id uuid PRIMARY KEY, title text)")
+    session.executeAsync("CREATE TABLE IF NOT EXISTS test.book (id uuid PRIMARY KEY, title text, authors map<text,text>)")
         .get(15, TimeUnit.SECONDS);
   }
 
@@ -389,6 +408,21 @@ public class CassandraTest {
     session.execute(preparedStatement.bind(UUIDs.timeBased(), "title3"));
   }
 
+  private void insert_and_update(Session session) {
+    UUID uuid = UUIDs.timeBased();
+    session.execute("INSERT INTO test.book (id, title) VALUES (?, ?)",
+            uuid, "title");
+
+    PreparedStatement preparedStatement = session.prepare(
+            new SimpleStatement("UPDATE test.book SET authors['main']=? WHERE id=?"));
+    session.execute(preparedStatement.bind("John Doe", uuid));
+
+    PreparedStatement preparedStatement2 = session.prepare(
+            new SimpleStatement("UPDATE test.book SET authors['main']=?, authors['secondary']=?, references=? + references WHERE id=?"));
+    session.execute(preparedStatement2.bind("John Doe", "Adam Smith", Arrays.asList("Some Journal"), uuid));
+  }
+
+
   private void checkSpans(List<MockSpan> mockSpans) {
     for (MockSpan mockSpan : mockSpans) {
       assertEquals(Tags.SPAN_KIND_CLIENT, mockSpan.tags().get(Tags.SPAN_KIND.getKey()));
@@ -409,6 +443,14 @@ public class CassandraTest {
         }
       } else if (mockSpan.tags().get("db.statement").toString().contains("VALUES (:id, :title)")) {
         assertEquals("title2", mockSpan.tags().get("db.statement.value_1"));
+      } else if (mockSpan.tags().get("db.statement").toString().contains("UPDATE")) {
+        if (mockSpan.tags().containsKey("db.statement.authors")) {
+          assertEquals("John Doe", mockSpan.tags().get("db.statement.authors"));
+        } else {
+          assertEquals("John Doe", mockSpan.tags().get("db.statement.value_0"));
+          assertEquals("Adam Smith", mockSpan.tags().get("db.statement.value_1"));
+          assertEquals("[Some Journal]", mockSpan.tags().get("db.statement.references"));
+        }
       }
     }
   }

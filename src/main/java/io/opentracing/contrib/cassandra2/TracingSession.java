@@ -15,6 +15,8 @@ package io.opentracing.contrib.cassandra2;
 
 import com.datastax.driver.core.*;
 import com.google.common.base.Function;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.opentracing.Span;
@@ -33,6 +35,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Decorator for {@link Session} Instantiated by TracingCluster
@@ -286,12 +290,23 @@ public class TracingSession implements AsyncInitSession {
     return query == null ? "" : query;
   }
 
-  private static final String buildParamName(String param_name) {
-    return String.format("%s.%s", Tags.DB_STATEMENT.getKey(), param_name);
+  private static final String buildValueName(String valueName) {
+    return String.format("%s.%s", Tags.DB_STATEMENT.getKey(), normalizeName(valueName));
   }
 
-  private static final String buildParamKey(int param_index) {
-    return String.format("%s.value_%d", Tags.DB_STATEMENT.getKey(), param_index);
+  private static final String buildValueIndex(int valueIndex) {
+    return String.format("%s.value_%d", Tags.DB_STATEMENT.getKey(), valueIndex);
+  }
+
+  private static final Pattern mapValueMatch = Pattern.compile("value\\((.*)\\)");
+
+  private static final String normalizeName(String paramName) {
+    Matcher m = mapValueMatch.matcher(paramName);
+    if (m.matches()) {
+      return m.group(1);
+    } else {
+      return paramName;
+    }
   }
 
   private static void addQueryParams(Span span, Statement statement) {
@@ -299,11 +314,24 @@ public class TracingSession implements AsyncInitSession {
       return;
 
     if (statement instanceof BoundStatement) {
+      Multiset<String> allParamNames = HashMultiset.create();
+
       List<ColumnDefinitions.Definition> vars = ((BoundStatement) statement).preparedStatement().getVariables().asList();
       for (ColumnDefinitions.Definition def : vars) {
+        allParamNames.add(def.getName());
+      }
+
+      int index = 0;
+      for (ColumnDefinitions.Definition def : vars) {
         try {
-          span.setTag(buildParamName(def.getName()), String.valueOf(((BoundStatement) statement).getObject(def.getName())));
+          if (allParamNames.count(def.getName()) > 1) {
+            span.setTag(buildValueIndex(index), String.valueOf(((BoundStatement) statement).getObject(index)));
+          } else {
+            span.setTag(buildValueName(def.getName()), String.valueOf(((BoundStatement) statement).getObject(def.getName())));
+          }
         } catch (Throwable ignored) { /* An ill-described query will fail here */ }
+
+        index++;
       }
     }
   }
@@ -313,7 +341,7 @@ public class TracingSession implements AsyncInitSession {
       return;
 
     for (int i = 0; i < params.length; i++) {
-      span.setTag(buildParamKey(i), String.valueOf(params[i]));
+      span.setTag(buildValueIndex(i), String.valueOf(params[i]));
     }
   }
 
