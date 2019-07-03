@@ -39,7 +39,7 @@ import java.util.concurrent.Executors;
  */
 public class TracingSession implements AsyncInitSession {
 
-  static final String COMPONENT_NAME = "java-cassandra2";
+  static final String COMPONENT_NAME = "java-cassandra";
   private static final boolean queryParamsExtracted = retrieveQueryParamsExtractedConfig();
 
   private final ExecutorService executorService;
@@ -339,7 +339,7 @@ public class TracingSession implements AsyncInitSession {
 
     Tags.COMPONENT.set(span, COMPONENT_NAME);
     Tags.DB_STATEMENT.set(span, query);
-    Tags.DB_TYPE.set(span, "cassandra2");
+    Tags.DB_TYPE.set(span, "cassandra");
 
     String keyspace = getLoggedKeyspace();
     if (keyspace != null) {

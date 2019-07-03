@@ -393,7 +393,7 @@ public class CassandraTest {
     for (MockSpan mockSpan : mockSpans) {
       assertEquals(Tags.SPAN_KIND_CLIENT, mockSpan.tags().get(Tags.SPAN_KIND.getKey()));
       assertEquals(TracingSession.COMPONENT_NAME, mockSpan.tags().get(Tags.COMPONENT.getKey()));
-      assertEquals("cassandra2", mockSpan.tags().get(Tags.DB_TYPE.getKey()));
+      assertEquals("cassandra", mockSpan.tags().get(Tags.DB_TYPE.getKey()));
       assertEquals(0, mockSpan.generatedErrors().size());
       String operationName = mockSpan.operationName();
       assertEquals("execute", operationName);
@@ -416,7 +416,7 @@ public class CassandraTest {
   private void checkSpanWithError(MockSpan span) {
     assertEquals(Tags.SPAN_KIND_CLIENT, span.tags().get(Tags.SPAN_KIND.getKey()));
     assertEquals(TracingSession.COMPONENT_NAME, span.tags().get(Tags.COMPONENT.getKey()));
-    assertEquals("cassandra2", span.tags().get(Tags.DB_TYPE.getKey()));
+    assertEquals("cassandra", span.tags().get(Tags.DB_TYPE.getKey()));
     assertEquals(0, span.generatedErrors().size());
     String operationName = span.operationName();
     assertEquals("execute", operationName);
